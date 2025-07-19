@@ -18,7 +18,7 @@
     };
 
     outputs =
-        {self, nixpkgs, ... };
+        {self, nixpkgs, ... }:
         let
             inherit (nixpkgs.lib) nixosSystem genAttrs replaceStrings;
             inherit (nixpkgs.lib.filesystem) packagesFromDirectoryRecursive listFilesRecursive;
