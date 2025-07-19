@@ -32,6 +32,20 @@
 
             nameOf = path: replaceStrings [ ".nix" ] [ "" ] (baseNameOf (toString path));
         in
+        let
+            recursiveImport = dir:
+                let
+                    files = builtins.filter
+                        (file: builtins.match ".*\\.nix$" file != null)
+                        (builtins.attrNames (builtins.readDir dir));
+                in
+                   builtins.listToAttrs (
+                       map (file: {
+                           name = builtins.replaceStrings [".nix"] [""] file;
+                           value = import (dir + "/${file}");
+                       }) files
+                   );
+        in
         {
             packages = forAllSystems (
                 pkgs:
@@ -48,25 +62,26 @@
 
             homeModules = genAttrs (map nameOf (listFilesRecursive ./home)) (name: import ./home/${name}.nix);
 
-            overlays = genAttrs (map nameOf (listFilesRecursive ./overlays)) (
-                name: import ./overlays/${name}.nix
-            );
-
-            checks = forAllSystems (
-                pkgs:
-                genAttrs (map nameOf (listFilesRecursive ./tests)) (
-                    name:
-                        import ./tests/${name}.nix {
-                            inherit self pkgs;
-                        }
-                )
-            );
+            #overlays = genAttrs (map nameOf (listFilesRecursive ./overlays)) (
+            #    name: import ./overlays/${name}.nix
+            #);
+            overlays = if builtins.pathExists ./overlays then recursiveImport ./overlays else {};
+            #checks = forAllSystems (
+            #    pkgs:
+            #    genAttrs (map nameOf (listFilesRecursive ./tests)) (
+            #        name:
+            #            import ./tests/${name}.nix {
+            #                inherit self pkgs;
+            #            }
+            #    )
+            #);
 
             nixosConfigurations = {
-                nixos = nixosSystem {
+                 desktop = nixosSystem {
                     system = "x86_64-linux";
                     specialArgs.nix-config = self;
-                    modules = listFilesRecursive ./hosts/laptop;
+                    #modules = listFilesRecursive ./hosts/Desktop/configuration.nix;
+                    modules = [ ./hosts/Desktop/configuration.nix ];
                 };
             };
 
